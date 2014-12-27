@@ -22,7 +22,7 @@
 #   3. Go back and edit the A record you just created. Make a note of the
 #      ResourceID in the URI of the page while editing the record.
 #
-#   4. Edit the four configuration options below, following the directions for
+#   4. Edit the five configuration options below, following the directions for
 #      each.  As this is a quick hack, it assumes everything goes right.
 #
 # First, the resource ID that contains the 'home' record you created above. If
@@ -34,6 +34,11 @@
 #
 RESOURCE = "000000"
 #
+# The root domain that your A record is under. For example if your A record
+# is for home.example.come then your root domain would be example.com
+#
+DOMAIN = "example.com"
+#
 # Your Linode API key.  You can generate this by going to your profile in the
 # Linode manager.  It should be fairly long.
 #
@@ -41,13 +46,9 @@ KEY = "abcdefghijklmnopqrstuvwxyz"
 #
 # The URI of a Web service that returns your IP address as plaintext.  You are
 # welcome to leave this at the default value and use mine.  If you want to run
-# your own, the source code of that script is:
+# your own, then you can use https://github.com/mhotchen/IP-echo as a start.
 #
-#     <?php
-#     header("Content-type: text/plain");
-#     printf("%s", $_SERVER["REMOTE_ADDR"]);
-#
-GETIP = "http://hosted.jedsmith.org/ip.php"
+GETIP = "http://ip.mhn.me"
 #
 # If for some reason the API URI changes, or you wish to send requests to a
 # different URI for debugging reasons, edit this.  {0} will be replaced with the
@@ -89,7 +90,7 @@ try:
 except Exception as excp:
 	exit("Couldn't import the standard library. Are you running Python 3?")
 
-def execute(action, parameters):
+def execute(action, parameters = {}):
 	# Execute a query and return a Python dictionary.
 	uri = "{0}&action={1}".format(API.format(KEY), action)
 	if parameters and len(parameters) > 0:
@@ -122,19 +123,37 @@ def ip():
 
 def main():
 	try:
-		res = execute("domainResourceGet", {"ResourceID": RESOURCE})["DATA"]
-		if(len(res)) == 0:
+		domain_list = execute("domainList")["DATA"]
+		if(len(domain_list)) == 0:
 			raise Exception("No such resource?".format(RESOURCE))
+
+		domain_id = ""
+		for domain in domain_list:
+			if domain["DOMAIN"] == DOMAIN:
+				domain_id = domain["DOMAINID"]
+
+		if domain_id == "":
+			raise Exception("Couldn't find domain ".format(DOMAIN))
+
+		matched_records = execute("domainResourceGet", {"ResourceID": RESOURCE_ID, "DomainID": domain_id})["DATA"]
+		if len(matched_records) == 0:
+			raise Exception("No such resource? ".format(RESOURCE_ID))
+
+		if len(matched_records) > 1:
+			raise Exception("More than one resource with that ID and domain")
+
+		a_record = matched_records[0]
+
 		public = ip()
-		if res["TARGET"] != public:
-			old = res["TARGET"]
+		if a_record["TARGET"] != public:
+			old = a_record["TARGET"]
 			request = {
-				"ResourceID": res["RESOURCEID"],
-				"DomainID": res["DOMAINID"],
-				"Name": res["NAME"],
-				"Type": res["TYPE"],
+				"ResourceID": a_record["RESOURCEID"],
+				"DomainID": a_record["DOMAINID"],
+				"Name": a_record["NAME"],
+				"Type": a_record["TYPE"],
 				"Target": public,
-				"TTL_Sec": res["TTL_SEC"]
+				"TTL_Sec": a_record["TTL_SEC"]
 			}
 			execute("domainResourceSave", request)
 			print("OK {0} -> {1}".format(old, public))
