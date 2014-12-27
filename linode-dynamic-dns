@@ -1,7 +1,8 @@
-#!/usr/bin/python3.1
+#!/usr/bin/python3.2
 #
 # Easy Python3 Dynamic DNS
 # By Jed Smith <jed@jedsmith.org> 4/29/2009
+# Forked by Matt Hotchen <github@mhn.me> 12/27/2014
 # This code and associated documentation is released into the public domain.
 #
 # This script **REQUIRES** Python 3.0 or above.  Python 2.6 may work.
@@ -27,10 +28,8 @@
 #
 # First, the resource ID that contains the 'home' record you created above. If
 # the URI while editing that A record looks like this:
-#
-#  linode.com/members/dns/resource_aud.cfm?DomainID=98765&ResourceID=123456
-#                                                                    ^
-# You want 123456. The API key MUST have write access to this resource ID.
+#     manager.linode.com/dns/resource/example.com?id=12345
+# You want 12345. The API key MUST have write access to this resource ID.
 #
 RESOURCE = "000000"
 #
